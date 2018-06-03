@@ -44,8 +44,8 @@ public class StandardElement implements Element {
 
     @Override
     public void setAttribute(String name, String value) throws DOMException {
-        //Attr attr = new StandardAttr(name,value);
-        //setAttributeNode(attr);
+        Attr attr = new StandardAttr(name,value);
+        setAttributeNode(attr);
     }
 
     @Override
