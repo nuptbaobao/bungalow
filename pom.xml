@@ -72,6 +72,11 @@
             <artifactId>ojdbc6</artifactId>
             <version>11.2.0.3.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.dm</groupId>
+            <artifactId>dmjdbcdriver</artifactId>
+            <version>1.0</version>
+        </dependency>
         <!-- <dependency>
             <groupId>com.cyg.sunri.dakota</groupId>
             <artifactId>common</artifactId>
