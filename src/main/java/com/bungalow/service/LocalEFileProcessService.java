@@ -102,14 +102,15 @@ public class LocalEFileProcessService {
     public void processEFiles(String filesPath, List<String> files) {
         for (int i = 0; i < files.size(); i++) {
             try {
+                logger.info("开始解析E文件");
                 List<ETable> list = parser.parseFile(filesPath + "/" + files.get(i));
                 eTableParseService.parseETable(list);
                 File file = new File(filesPath + "/" + files.get(i));
 //                file.delete();
-                logger.info("E文件解析成功");
+                logger.info("E文件解析成功，删除E文件");
             } catch (Exception e) {
                 e.printStackTrace();
-                logger.info("E文件解析失败");
+                logger.info("E文件解析失败，保留E文件");
             }
         }
     }

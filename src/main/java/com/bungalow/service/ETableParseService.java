@@ -1,6 +1,7 @@
 package com.bungalow.service;
 
 import com.bungalow.dao.GenerationPlanDao;
+import com.bungalow.entity.config.Config;
 import com.bungalow.entity.efile.ETable;
 import com.bungalow.service.LocalEFileProcessService;
 import lombok.extern.slf4j.Slf4j;
@@ -26,19 +27,22 @@ import java.util.List;
 @Slf4j
 public class ETableParseService {
     @Autowired
+    private Config config;
+
+    @Autowired
     private GenerationPlanDao generationPlanDao;
 
     private SimpleDateFormat datefmt = new SimpleDateFormat("yyyyMMdd");
-    private SimpleDateFormat timefmt = new SimpleDateFormat("HHmm");
+    private SimpleDateFormat hourfmt = new SimpleDateFormat("HH");
+    private SimpleDateFormat minutefmt = new SimpleDateFormat("mm");
+
 
     private static Logger logger = LoggerFactory.getLogger(LocalEFileProcessService.class);
 
     public void parseETable(List<ETable> list) {
         if (list.size() > 0) {
             List<String> info = dealWithInfo(list);
-            if (info != null) {
-                dealWithList(info, list);
-            }
+            dealWithList(info, list);
         }
     }
 
@@ -60,7 +64,11 @@ public class ETableParseService {
             e.printStackTrace();
         }
 
+
         for (ETable eTable : list) {
+
+            String tableName = "YC" + eTable.getDate().split("-")[0] + eTable.getDate().split("-")[1];
+
             if (eTable.getTableName().split("::")[0].equalsIgnoreCase("风电发电计划")) {
                 for (Object[] objs : eTable.getDatas()) {
                     if (objs.length < 3) {
@@ -68,21 +76,40 @@ public class ETableParseService {
                     }
 
                     GenerationPlan generationPlan = new GenerationPlan();
-                    generationPlan.setDistrict(info.get(0));
-                    generationPlan.setFarmcode(info.get(1));
+                    generationPlan.setName(config.getPowerCode());
+
+                    //设置日期
                     java.util.Date date = calendar.getTime();
-                    generationPlan.setSTime(date.getTime() / 1000);
+                    String sdf = datefmt.format(date);
+                    Calendar cal = Calendar.getInstance();
+                    cal.set(1970, 0, 1, 0, 0, 0);
+                    long intervalMilli = date.getTime() - cal.getTimeInMillis();
+                    int intervalDate = (int) (intervalMilli / (24 * 60 * 60 * 1000));
+                    generationPlan.setSDate(intervalDate);
 
-                    generationPlan.setSerialNumber(Integer.parseInt((String) objs[0]));
-                    generationPlan.setDataName((String) objs[1]);
-                    generationPlan.setGenerationValue(Float.parseFloat((String) objs[2]));
+                    //设置时间
+                    int hour = Integer.parseInt(hourfmt.format(date));
+                    int minute = Integer.parseInt(minutefmt.format(date));
+                    int time = hour * 60 + minute;
+                    if (hour == 0 && minute == 0) {
+                        time = 1440;
+                    }
 
+                    generationPlan.setTime(time);
+
+                    generationPlan.setFlag(51);
+                    generationPlan.setData(Float.parseFloat((String) objs[2]));
+                    generationPlan.setRawData(0);
                     gpList.add(generationPlan);
                     calendar.add(Calendar.MINUTE, 15);
                 }
             }
+            if (generationPlanDao.select(gpList, tableName) != 0) {
+                generationPlanDao.delete(gpList, tableName);
+            }
+            generationPlanDao.save(gpList, tableName);
         }
-        generationPlanDao.save(gpList);
+
     }
 
 

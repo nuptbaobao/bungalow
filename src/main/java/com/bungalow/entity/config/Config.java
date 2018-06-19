@@ -13,10 +13,11 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 public class Config {
-//    private String url;
+    //    private String url;
 //    private String userName;
 //    private String passWord;
 //    private String driverName;
     private String path;
     private Integer interval;
+    private String powerCode;
 }
