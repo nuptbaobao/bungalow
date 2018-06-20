@@ -100,19 +100,25 @@ public class LocalEFileProcessService {
      * @param files     E文件列表
      */
     public void processEFiles(String filesPath, List<String> files) {
+        logger.info("文件数量{}", files.size());
         for (int i = 0; i < files.size(); i++) {
+            logger.info("当前文件名: {}", files.get(i));
             try {
-                logger.info("开始解析E文件");
+                logger.info("一共{}个预测文件，开始解析第{}个预测文件", files.size(), i + 1);
                 List<ETable> list = parser.parseFile(filesPath + "/" + files.get(i));
-                eTableParseService.parseETable(list);
-                File file = new File(filesPath + "/" + files.get(i));
-//                file.delete();
-                logger.info("E文件解析成功，删除E文件");
+
+                //E文件入库成功再删除E文件
+                if (eTableParseService.parseETable(list)) {
+                    File file = new File(filesPath + "/" + files.get(i));
+                    file.delete();
+                    logger.info("E文件解析成功，删除E文件");
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 logger.info("E文件解析失败，保留E文件");
             }
         }
+        logger.warn("E文件格式不对，不予处理，文件名{}");
     }
 
 

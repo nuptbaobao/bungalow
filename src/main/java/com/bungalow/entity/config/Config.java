@@ -20,4 +20,5 @@ public class Config {
     private String path;
     private Integer interval;
     private String powerCode;
+    private Integer dataNumber;
 }

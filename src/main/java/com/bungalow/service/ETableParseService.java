@@ -39,26 +39,41 @@ public class ETableParseService {
 
     private static Logger logger = LoggerFactory.getLogger(LocalEFileProcessService.class);
 
-    public void parseETable(List<ETable> list) {
+    public Boolean parseETable(List<ETable> list) {
         if (list.size() > 0) {
             List<String> info = dealWithInfo(list);
-            dealWithList(info, list);
+            return dealWithList(info, list);
         }
+        logger.warn("E文件为空，不予处理");
+        return false;
     }
 
-    private void dealWithList(List<String> info, List<ETable> list) {
+    private Boolean dealWithList(List<String> info, List<ETable> list) {
 
         List<GenerationPlan> gpList = new ArrayList<>();
 
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
+        Calendar eFileCalendar = Calendar.getInstance();
+        eFileCalendar.set(Calendar.HOUR_OF_DAY, 0);
+        eFileCalendar.set(Calendar.MINUTE, 0);
+
 
         try {
-            Date date = new Date(datefmt.parse(info.get(2)).getTime());
-            calendar.setTime(date);
-            calendar.add(Calendar.DAY_OF_MONTH, 0);
-            calendar.add(Calendar.MINUTE, 15);
+            Date eFileDate = new Date(datefmt.parse(info.get(2)).getTime());
+            eFileCalendar.setTime(eFileDate);
+            eFileCalendar.add(Calendar.DAY_OF_MONTH, 0);
+            eFileCalendar.add(Calendar.MINUTE, 15);
+
+            java.util.Date utilDate = new java.util.Date();
+            java.sql.Date nowDate = new java.sql.Date(utilDate.getTime());
+
+            Date t1 =java.sql.Date.valueOf(eFileDate.toString());
+            Date t2 =java.sql.Date.valueOf(nowDate.toString());
+
+            //日期比较
+            if(t1.before(t2)){
+                logger.info("当前E文件日期超前，不予处理");
+                return false;
+            }
 
         } catch (ParseException e) {
             e.printStackTrace();
@@ -70,46 +85,58 @@ public class ETableParseService {
             String tableName = "YC" + eTable.getDate().split("-")[0] + eTable.getDate().split("-")[1];
 
             if (eTable.getTableName().split("::")[0].equalsIgnoreCase("风电发电计划")) {
-                for (Object[] objs : eTable.getDatas()) {
-                    if (objs.length < 3) {
-                        continue;
+
+                //E文件数据条目和配置文件一致才入库处理
+                if (eTable.getDatas().size() == config.getDataNumber()) {
+                    for (Object[] objs : eTable.getDatas()) {
+                        if (objs.length < 3) {
+                            continue;
+                        }
+
+                        GenerationPlan generationPlan = new GenerationPlan();
+                        generationPlan.setName(config.getPowerCode());
+
+                        //设置日期
+                        java.util.Date date = eFileCalendar.getTime();
+                        String sdf = datefmt.format(date);
+                        Calendar cal = Calendar.getInstance();
+                        cal.set(1970, 0, 1, 0, 0, 0);
+                        long intervalMilli = date.getTime() - cal.getTimeInMillis();
+                        int intervalDate = (int) (intervalMilli / (24 * 60 * 60 * 1000));
+                        generationPlan.setSDate(intervalDate);
+
+                        //设置时间
+                        int hour = Integer.parseInt(hourfmt.format(date));
+                        int minute = Integer.parseInt(minutefmt.format(date));
+                        int time = hour * 60 + minute;
+                        if (hour == 0 && minute == 0) {
+                            time = 1440;
+                        }
+
+                        generationPlan.setTime(time);
+
+                        generationPlan.setFlag(51);
+                        generationPlan.setData(Float.parseFloat((String) objs[2]));
+                        generationPlan.setRawData(0);
+                        gpList.add(generationPlan);
+                        eFileCalendar.add(Calendar.MINUTE, 15);
                     }
-
-                    GenerationPlan generationPlan = new GenerationPlan();
-                    generationPlan.setName(config.getPowerCode());
-
-                    //设置日期
-                    java.util.Date date = calendar.getTime();
-                    String sdf = datefmt.format(date);
-                    Calendar cal = Calendar.getInstance();
-                    cal.set(1970, 0, 1, 0, 0, 0);
-                    long intervalMilli = date.getTime() - cal.getTimeInMillis();
-                    int intervalDate = (int) (intervalMilli / (24 * 60 * 60 * 1000));
-                    generationPlan.setSDate(intervalDate);
-
-                    //设置时间
-                    int hour = Integer.parseInt(hourfmt.format(date));
-                    int minute = Integer.parseInt(minutefmt.format(date));
-                    int time = hour * 60 + minute;
-                    if (hour == 0 && minute == 0) {
-                        time = 1440;
-                    }
-
-                    generationPlan.setTime(time);
-
-                    generationPlan.setFlag(51);
-                    generationPlan.setData(Float.parseFloat((String) objs[2]));
-                    generationPlan.setRawData(0);
-                    gpList.add(generationPlan);
-                    calendar.add(Calendar.MINUTE, 15);
+                } else {
+                    logger.warn("E文件数据数量为{}，少于配置文件里配置数量{}，不予入库处理", eTable.getDatas().size(), config.getDataNumber());
+                    return false;
                 }
             }
             if (generationPlanDao.select(gpList, tableName) != 0) {
                 generationPlanDao.delete(gpList, tableName);
             }
+//            for(int i=0;i< gpList.size();i++){
+//                logger.info(gpList.get(i).getName() +'\n');
+//                logger.info(gpList.get(i).getData().toString() +'\n');
+//            }
             generationPlanDao.save(gpList, tableName);
+            return true;
         }
-
+        return false;
     }
 
 
