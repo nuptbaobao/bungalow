@@ -56,7 +56,6 @@ public class LocalEFileProcessService {
         public void run() {
             logger.info("任务开始");
             long a = System.currentTimeMillis();
-
             String filePath = config.getPath();
             List<String> files = getFiles(filePath);
             Collections.sort(files);
