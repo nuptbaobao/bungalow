@@ -10,6 +10,7 @@ export PATH=$PATH:$JAVA_HOME/bin:$JAVA_HOME/jre/bin
 
 start(){
  now=`date "+%Y%m%d%H%M%S"`
+ sh -prs3000 -c "prs3000!"
  exec java -Xms128m -Xmx1024m -jar /home/prs3000/bungalow/bungalow.jar
 }
 
