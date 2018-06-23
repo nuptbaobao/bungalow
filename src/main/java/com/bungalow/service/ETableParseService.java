@@ -66,11 +66,11 @@ public class ETableParseService {
             java.util.Date utilDate = new java.util.Date();
             java.sql.Date nowDate = new java.sql.Date(utilDate.getTime());
 
-            Date t1 =java.sql.Date.valueOf(eFileDate.toString());
-            Date t2 =java.sql.Date.valueOf(nowDate.toString());
+            Date t1 = java.sql.Date.valueOf(eFileDate.toString());
+            Date t2 = java.sql.Date.valueOf(nowDate.toString());
 
             //日期比较
-            if(t1.before(t2)){
+            if (t1.before(t2)) {
                 logger.info("当前E文件日期超前，不予处理");
                 return false;
             }
@@ -126,15 +126,29 @@ public class ETableParseService {
                     return false;
                 }
             }
-            if (generationPlanDao.select(gpList, tableName) != 0) {
-                generationPlanDao.delete(gpList, tableName);
+
+            //双数据源
+            if (config.getDoubleDataSource()) {
+                if (generationPlanDao.dataSource1Select(gpList, tableName) != 0) {
+                    generationPlanDao.dataSource1Delete(gpList, tableName);
+                }
+                generationPlanDao.dataSource1Save(gpList, tableName);
+                if (generationPlanDao.dataSource2Select(gpList, tableName) != 0) {
+                    generationPlanDao.dataSource2Delete(gpList, tableName);
+                }
+                generationPlanDao.dataSource2Save(gpList, tableName);
+                return true;
+
             }
-//            for(int i=0;i< gpList.size();i++){
-//                logger.info(gpList.get(i).getName() +'\n');
-//                logger.info(gpList.get(i).getData().toString() +'\n');
-//            }
-            generationPlanDao.save(gpList, tableName);
-            return true;
+            //单一数据源
+            if (!config.getDoubleDataSource()) {
+                if (generationPlanDao.dataSource1Select(gpList, tableName) != 0) {
+                    generationPlanDao.dataSource1Delete(gpList, tableName);
+                }
+                generationPlanDao.dataSource1Save(gpList, tableName);
+                return true;
+
+            }
         }
         return false;
     }

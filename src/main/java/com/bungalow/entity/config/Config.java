@@ -17,6 +17,7 @@ public class Config {
 //    private String userName;
 //    private String passWord;
 //    private String driverName;
+    private Boolean doubleDataSource;
     private String path;
     private Integer interval;
     private String powerCode;
